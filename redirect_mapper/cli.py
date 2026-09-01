@@ -24,8 +24,12 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("new_sitemap", help="XML sitemap (or sitemap index) of the new site")
     parser.add_argument("-o", "--out", default="redirects.csv")
     parser.add_argument("-u", "--unmatched", default="unmatched.csv")
-    parser.add_argument("--include", help="regex; keep only URLs matching it")
-    parser.add_argument("--exclude", help="regex; drop URLs matching it")
+    parser.add_argument("--include", help="regex; keep only URLs matching it (both sites)")
+    parser.add_argument("--exclude", help="regex; drop URLs matching it (both sites)")
+    parser.add_argument("--include-old", help="regex; overrides --include for the old site")
+    parser.add_argument("--exclude-old", help="regex; overrides --exclude for the old site")
+    parser.add_argument("--include-new", help="regex; overrides --include for the new site")
+    parser.add_argument("--exclude-new", help="regex; overrides --exclude for the new site")
     parser.add_argument(
         "--titles",
         choices=("auto", "always", "never"),
@@ -46,6 +50,10 @@ def main(argv: list[str] | None = None) -> int:
     options = RunOptions(
         include=args.include,
         exclude=args.exclude,
+        include_old=args.include_old,
+        exclude_old=args.exclude_old,
+        include_new=args.include_new,
+        exclude_new=args.exclude_new,
         use_titles=args.titles,
         workers=args.workers,
         timeout=args.timeout,
@@ -64,6 +72,13 @@ def main(argv: list[str] | None = None) -> int:
 
     bands = Counter(m.confidence for m in report.result.matches)
     print(f"\nOld URLs: {report.old_count}   New URLs: {report.new_count}", file=sys.stderr)
+    if report.new_count * 2 < report.old_count:
+        print(
+            "  WARNING: the new-site pool is far smaller than the old one. If you used"
+            "\n  --include, check it matches the new site's structure too -- sections are"
+            "\n  often renamed in a redesign. Use --include-old / --include-new to differ.",
+            file=sys.stderr,
+        )
     for band in (5, 4, 3, 2, 1):
         if bands[band]:
             print(f"  confidence {band}: {bands[band]}", file=sys.stderr)

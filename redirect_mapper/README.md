@@ -63,9 +63,22 @@ with a visited set so a self-referencing index can't loop). `.xml.gz` children a
 handled. If you want to restrict to episodes:
 
 ```bash
---include '/podcast/|/episodes/'      # keep only these
---exclude '/(tag|category|author)/'   # drop these
+--include '/podcast/|/episodes/'      # keep only these, on both sites
+--exclude '/(tag|category|author)/'   # drop these, on both sites
 ```
+
+Sections are usually renamed in a redesign, so the two sides often need different
+patterns. `--include-old` / `--include-new` (and the `--exclude-` pair) override one
+side. Matching an old `/articles/` section against pieces that now live at the site
+root:
+
+```bash
+--include-old '/articles/' --exclude-new '/(wp-content|category|author|tag|podcasts)/'
+```
+
+Filtering both sides with a section name the new site doesn't use will silently strip
+the new-site pool to nothing, so the run warns when the new pool comes back less than
+half the size of the old one.
 
 ## Structure
 

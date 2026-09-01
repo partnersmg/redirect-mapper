@@ -17,8 +17,15 @@ from .matching import (
 
 @dataclass
 class RunOptions:
+    # include/exclude apply to both sitemaps; the _old/_new variants override one
+    # side. Sections rarely survive a redesign intact, so an old-site section
+    # usually has to be matched against a differently-shaped new-site pool.
     include: str | None = None
     exclude: str | None = None
+    include_old: str | None = None
+    exclude_old: str | None = None
+    include_new: str | None = None
+    exclude_new: str | None = None
     use_titles: str = "auto"  # auto | always | never
     workers: int = 16
     timeout: int = 20
@@ -33,11 +40,13 @@ class RunReport:
     titles_fetched: int
 
 
-def _filter_urls(urls: list[str], options: RunOptions) -> list[str]:
+def _filter_urls(
+    urls: list[str], include_pattern: str | None, exclude_pattern: str | None
+) -> list[str]:
     seen: set[str] = set()
     kept: list[str] = []
-    include = re.compile(options.include) if options.include else None
-    exclude = re.compile(options.exclude) if options.exclude else None
+    include = re.compile(include_pattern) if include_pattern else None
+    exclude = re.compile(exclude_pattern) if exclude_pattern else None
     for url in urls:
         if url in seen:
             continue
@@ -62,13 +71,17 @@ def run_mapping(
 
     say("Fetching old sitemap...")
     old_urls = _filter_urls(
-        fetch_sitemap_urls(old_sitemap_url, session, options.timeout), options
+        fetch_sitemap_urls(old_sitemap_url, session, options.timeout),
+        options.include_old or options.include,
+        options.exclude_old or options.exclude,
     )
     say(f"  {len(old_urls)} old URLs")
 
     say("Fetching new sitemap...")
     new_urls = _filter_urls(
-        fetch_sitemap_urls(new_sitemap_url, session, options.timeout), options
+        fetch_sitemap_urls(new_sitemap_url, session, options.timeout),
+        options.include_new or options.include,
+        options.exclude_new or options.exclude,
     )
     say(f"  {len(new_urls)} new URLs")
 
