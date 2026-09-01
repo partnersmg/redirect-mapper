@@ -123,6 +123,12 @@ def _looks_like_year(value: int) -> bool:
     return 1900 <= value <= 2100
 
 
+def _section_segment(url: str) -> str:
+    """The path segment above the slug: /podcasts/x/ -> 'podcasts', /x/ -> ''."""
+    segments = [s for s in unquote(urlsplit(url).path).split("/") if s]
+    return segments[-2].lower() if len(segments) >= 2 else ""
+
+
 def _numbers_agree(old_page: Page, new_page: Page) -> bool:
     if not old_page.identifier or not new_page.identifier:
         return False
@@ -219,16 +225,27 @@ def match_pages(
         new_by_slug.setdefault(normalize(page.slug), []).append(page)
     claimed_old.clear()
     claimed_new.clear()
-    for old_page in remaining_old:
-        group = new_by_slug.get(normalize(old_page.slug), [])
-        available = [p for p in group if p.url not in claimed_new]
-        if len(available) != 1:
-            continue
-        result.matches.append(
-            Match(old_page.url, available[0].url, 5, 100.0, "exact slug")
-        )
-        claimed_old.add(old_page.url)
-        claimed_new.add(available[0].url)
+    # Two passes. Pages that agree on slug *and* section are matched first, so
+    # /podcasts/x claims /podcasts/x before /articles/x has to choose between
+    # /x and /podcasts/x. Without this, a slug published in two sections is
+    # resolved by greedy tie-breaking, which is to say by luck.
+    for require_same_section in (True, False):
+        for old_page in remaining_old:
+            if old_page.url in claimed_old:
+                continue
+            group = new_by_slug.get(normalize(old_page.slug), [])
+            available = [p for p in group if p.url not in claimed_new]
+            if require_same_section:
+                section = _section_segment(old_page.url)
+                available = [p for p in available if _section_segment(p.url) == section]
+            if len(available) != 1:
+                continue
+            basis = "exact slug + section" if require_same_section else "exact slug"
+            result.matches.append(
+                Match(old_page.url, available[0].url, 5, 100.0, basis)
+            )
+            claimed_old.add(old_page.url)
+            claimed_new.add(available[0].url)
 
     remaining_old = [p for p in remaining_old if p.url not in claimed_old]
     remaining_new = [p for p in remaining_new if p.url not in claimed_new]

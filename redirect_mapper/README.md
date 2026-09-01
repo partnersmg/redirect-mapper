@@ -25,7 +25,7 @@ new URL is never assigned to two old URLs.
 | Tier | Signal | Confidence |
 |---|---|---|
 | 1 | Same episode identifier (`ep-101`, `episode 101`, `#101`), unambiguous on both sides | 5 |
-| 2 | Identical normalized slug | 5 |
+| 2 | Identical normalized slug, section-aware (`/podcasts/x` prefers `/podcasts/x` over `/x`) | 5 |
 | 3 | Strong fuzzy score **and** a shared number in both URLs | 5 |
 | 3 | Fuzzy score ≥ 92 / ≥ 82 / ≥ 70 / ≥ 60 | 4 / 3 / 2 / 1 |
 | 4 | Fuzzy score < 60 | flagged, not written to `redirects.csv` |
@@ -84,6 +84,15 @@ rows = matches_to_rows(report.result.matches)   # ready for csv.writer
 - `pipeline.py` — `run_mapping()`, the one call a web UI needs.
 - `cli.py` — argument parsing and file writing only.
 - `test_matching.py` — fixture tests: `python -m redirect_mapper.test_matching`
+
+## Scope each run to comparable content
+
+Run one section at a time (`--include '/podcasts/'`) rather than the whole site at once.
+A larger candidate pool doesn't help an old URL whose counterpart doesn't exist — it just
+gives the fuzzy tier more chances to clear the floor with an unrelated page. In testing,
+two episodes with no counterpart on the new site were correctly flagged in a
+podcasts-only run, and in the whole-site run were matched at confidence 3 to unrelated
+service pages instead.
 
 ## Reviewing the output
 

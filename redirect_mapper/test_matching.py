@@ -77,6 +77,23 @@ def test_shared_number_promotes_strong_fuzzy() -> None:
     assert match.confidence == 5
 
 
+def test_same_slug_in_two_sections_resolves_by_section() -> None:
+    """A post published as both an article and a podcast must not cross over."""
+    old_pages = [
+        Page("https://old.com/articles/voice-is-not-dead/"),
+        Page("https://old.com/podcasts/voice-is-not-dead/"),
+    ]
+    new_pages = [
+        Page("https://new.com/voice-is-not-dead/"),
+        Page("https://new.com/podcasts/voice-is-not-dead/"),
+    ]
+    by_old = {m.old_url: m for m in match_pages(old_pages, new_pages).matches}
+
+    assert by_old[old_pages[1].url].new_url == new_pages[1].url  # podcast -> podcast
+    assert by_old[old_pages[0].url].new_url == new_pages[0].url  # article -> root
+    assert all(m.confidence == 5 for m in by_old.values())
+
+
 def test_never_forces_a_match() -> None:
     old_pages = [Page("https://old.com/podcast/ep-1-widgets-and-gadgets/")]
     new_pages = [Page("https://new.com/contact/")]
