@@ -85,6 +85,16 @@ rows = matches_to_rows(report.result.matches)   # ready for csv.writer
 - `cli.py` — argument parsing and file writing only.
 - `test_matching.py` — fixture tests: `python -m redirect_mapper.test_matching`
 
+## Reviewing the output
+
+CSVs are written with RFC 4180 line endings (`\r\n`), which Excel and Sheets want but
+which breaks naive `grep ',5$'`. Use `awk`, which coerces the trailing `\r` away:
+
+```bash
+awk -F, 'NR>1 && $3+0 < 5' redirects.csv    # everything needing review
+awk -F, 'NR>1 && $3+0 == 5' redirects.csv   # the safe tier
+```
+
 ## Known limits (it's a POC)
 
 - Short slugs inflate fuzzy scores (`/about-us/` → `/about/` scores 90). Review anything
