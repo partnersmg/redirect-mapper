@@ -60,7 +60,12 @@ of the page bodies.
 
 Both sitemaps are read in full, including sitemap-index files (recursively, depth 3,
 with a visited set so a self-referencing index can't loop). `.xml.gz` children are
-handled. If you want to restrict to episodes:
+handled. If the URL serves an HTML page instead of XML — a plugin-generated `/sitemap/`
+page — its same-host links are used instead, dropping assets, fragments and off-site
+links. Prefer the real `sitemap_index.xml` where one exists: an HTML sitemap also picks
+up whatever the page's own nav and footer link to.
+
+If you want to restrict to episodes:
 
 ```bash
 --include '/podcast/|/episodes/'      # keep only these, on both sites

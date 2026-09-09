@@ -8,6 +8,7 @@ import re
 import xml.etree.ElementTree as ET
 from concurrent.futures import ThreadPoolExecutor
 from collections import Counter
+from urllib.parse import urldefrag, urljoin, urlsplit
 
 import requests
 
@@ -23,6 +24,11 @@ _OG_TITLE = re.compile(
 )
 _H1 = re.compile(r"<h1[^>]*>(.*?)</h1>", re.IGNORECASE | re.DOTALL)
 _TAGS = re.compile(r"<[^>]+>")
+_HREF = re.compile(r"""<a\b[^>]*\bhref\s*=\s*["']([^"']+)["']""", re.IGNORECASE)
+_NON_PAGE_SUFFIX = re.compile(
+    r"\.(jpe?g|png|gif|svg|webp|ico|css|js|pdf|zip|mp3|mp4|wav|docx?|xlsx?|pptx?)$",
+    re.IGNORECASE,
+)
 
 
 def make_session() -> requests.Session:
@@ -44,6 +50,26 @@ def _localname(tag: str) -> str:
     return tag.rsplit("}", 1)[-1]
 
 
+def links_from_html_sitemap(body: str, page_url: str) -> list[str]:
+    """Page links from an HTML sitemap. Same host only, no assets, no fragments."""
+    host = urlsplit(page_url).netloc.lower()
+    found: list[str] = []
+    seen: set[str] = set()
+    for href in _HREF.findall(body):
+        href = html.unescape(href.strip())
+        if href.startswith(("#", "mailto:", "tel:", "javascript:")):
+            continue
+        absolute = urldefrag(urljoin(page_url, href)).url
+        parts = urlsplit(absolute)
+        if parts.scheme not in ("http", "https") or parts.netloc.lower() != host:
+            continue
+        if _NON_PAGE_SUFFIX.search(parts.path) or absolute in seen:
+            continue
+        seen.add(absolute)
+        found.append(absolute)
+    return found
+
+
 def fetch_sitemap_urls(
     sitemap_url: str,
     session: requests.Session | None = None,
@@ -51,15 +77,37 @@ def fetch_sitemap_urls(
     _depth: int = 0,
     _seen: set[str] | None = None,
 ) -> list[str]:
-    """All page URLs behind a sitemap, following sitemap-index files recursively."""
+    """All page URLs behind a sitemap.
+
+    Follows sitemap-index files recursively. If the URL serves an HTML page
+    rather than XML -- a plugin-generated /sitemap/ page, say -- its same-host
+    links are used instead.
+    """
     session = session or make_session()
     seen = _seen if _seen is not None else set()
     if sitemap_url in seen or _depth > MAX_SITEMAP_DEPTH:
         return []
     seen.add(sitemap_url)
 
-    root = ET.fromstring(_get_bytes(session, sitemap_url, timeout))
-    kind = _localname(root.tag)
+    body = _get_bytes(session, sitemap_url, timeout)
+    try:
+        root = ET.fromstring(body)
+        kind = _localname(root.tag)
+    except ET.ParseError:
+        root, kind = None, "html"
+
+    # A well-formed HTML sitemap parses as XML perfectly happily and yields no
+    # <loc> elements, so trust the root tag rather than a parse failure.
+    if kind not in ("urlset", "sitemapindex"):
+        links = links_from_html_sitemap(
+            body.decode("utf-8", errors="replace"), sitemap_url
+        )
+        if not links:
+            raise ValueError(
+                f"{sitemap_url} is neither a sitemap nor a page with links to follow"
+            )
+        return links
+
     locs = [
         (element.text or "").strip()
         for element in root.iter()

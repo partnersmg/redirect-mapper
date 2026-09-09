@@ -1,7 +1,8 @@
-"""Fixture tests for the matching layer. Run: python -m redirect_mapper.test_matching"""
+"""Fixture tests for the pure logic. Run: python -m redirect_mapper.test_matching"""
 
 from __future__ import annotations
 
+from .fetching import links_from_html_sitemap
 from .matching import Page, extract_identifier, match_pages, normalize
 
 OLD = [
@@ -100,6 +101,25 @@ def test_never_forces_a_match() -> None:
     result = match_pages(old_pages, new_pages)
     assert not result.matches
     assert result.unmatched[0].old_url == old_pages[0].url
+
+
+def test_html_sitemap_links() -> None:
+    page = "https://old.com/sitemap/"
+    body = """
+      <ul>
+        <li><a href="/practice/telecom/">Telecom</a></li>
+        <li><a href="https://old.com/people/jane-doe/">Jane Doe</a></li>
+        <li><a href="https://twitter.com/someone">Twitter</a></li>
+        <li><a href="/brochure.pdf">Brochure</a></li>
+        <li><a href="mailto:hi@old.com">Email</a></li>
+        <li><a href="#top">Top</a></li>
+        <li><a href="/practice/telecom/#fees">Telecom fees</a></li>
+      </ul>
+    """
+    assert links_from_html_sitemap(body, page) == [
+        "https://old.com/practice/telecom/",
+        "https://old.com/people/jane-doe/",
+    ]
 
 
 def test_empty_new_sitemap_flags_everything() -> None:
