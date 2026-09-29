@@ -30,6 +30,8 @@ class RunOptions:
     workers: int = 16
     timeout: int = 20
     match_config: MatchConfig = field(default_factory=MatchConfig)
+    # Called as (done, total) while page titles are fetched, for progress bars.
+    title_progress: object | None = None
 
 
 @dataclass
@@ -65,25 +67,43 @@ def run_mapping(
     options: RunOptions | None = None,
     progress=None,
 ) -> RunReport:
+    """Fetch both sitemaps and map one against the other."""
     options = options or RunOptions()
     say = progress or (lambda message: None)
     session = make_session()
 
     say("Fetching old sitemap...")
+    old_all = fetch_sitemap_urls(old_sitemap_url, session, options.timeout)
+    say("Fetching new sitemap...")
+    new_all = fetch_sitemap_urls(new_sitemap_url, session, options.timeout)
+    return map_url_lists(old_all, new_all, options, progress)
+
+
+def map_url_lists(
+    old_all: list[str],
+    new_all: list[str],
+    options: RunOptions | None = None,
+    progress=None,
+) -> RunReport:
+    """Filter and match two already-fetched URL lists.
+
+    Split out from run_mapping so a caller mapping several sections of one site
+    can fetch each sitemap once and filter it differently per section.
+    """
+    options = options or RunOptions()
+    say = progress or (lambda message: None)
+
     old_urls = _filter_urls(
-        fetch_sitemap_urls(old_sitemap_url, session, options.timeout),
+        old_all,
         options.include_old or options.include,
         options.exclude_old or options.exclude,
     )
-    say(f"  {len(old_urls)} old URLs")
-
-    say("Fetching new sitemap...")
     new_urls = _filter_urls(
-        fetch_sitemap_urls(new_sitemap_url, session, options.timeout),
+        new_all,
         options.include_new or options.include,
         options.exclude_new or options.exclude,
     )
-    say(f"  {len(new_urls)} new URLs")
+    say(f"  {len(old_urls)} old URLs, {len(new_urls)} new URLs")
 
     old_pages = [Page(url) for url in old_urls]
     new_pages = [Page(url) for url in new_urls]
@@ -100,7 +120,9 @@ def run_mapping(
             targets = [p.url for p in old_pages if p.url not in resolved_old]
             targets += [p.url for p in new_pages if p.url not in resolved_new]
             say(f"Fetching {len(targets)} page titles ({options.workers} at a time)...")
-            titles = fetch_titles(targets, options.workers, options.timeout)
+            titles = fetch_titles(
+                targets, options.workers, options.timeout, options.title_progress
+            )
             titles_fetched = len(titles)
             say(f"  {titles_fetched} titles retrieved")
             for page in old_pages + new_pages:

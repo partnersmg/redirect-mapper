@@ -1,6 +1,19 @@
-# Redirect Mapper (POC)
+# Redirect Mapper
 
 Maps old-site URLs to new-site URLs for 301 redirects, using two XML sitemaps as input.
+
+## Web app
+
+```bash
+pip install -r redirect_mapper/requirements-app.txt
+python3 -m streamlit run redirect_mapper/app.py
+```
+
+Paste two sitemap URLs, name the sections to map (`/blog/` on the old site against
+`/articles/` on the new one), run, review what the matcher is unsure about, download the
+CSV. Deployment is covered in [DEPLOY.md](DEPLOY.md).
+
+## Command line
 
 ```bash
 pip install -r redirect_mapper/requirements.txt
@@ -99,8 +112,10 @@ rows = matches_to_rows(report.result.matches)   # ready for csv.writer
 
 - `matching.py` — `Page`, `match_pages()`, scoring/banding, CSV row builders. No I/O.
 - `fetching.py` — sitemap retrieval + parsing, concurrent title fetching.
-- `pipeline.py` — `run_mapping()`, the one call a web UI needs.
+- `pipeline.py` — `run_mapping()` fetches and maps; `map_url_lists()` maps two URL
+  lists already in hand, so a caller mapping several sections fetches each sitemap once.
 - `cli.py` — argument parsing and file writing only.
+- `app.py` — Streamlit UI. Presentation only; it calls `map_url_lists()`.
 - `test_matching.py` — fixture tests: `python -m redirect_mapper.test_matching`
 
 ## Scope each run to comparable content
