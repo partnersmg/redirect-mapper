@@ -1,0 +1,3 @@
+# Streamlit Community Cloud installs from this file at the repo root.
+# The real list lives with the app.
+-r redirect_mapper/requirements-app.txt

@@ -16,7 +16,7 @@ will see, just not reachable by anyone else.
 applications through Phusion Passenger. Streamlit is not a WSGI application — it's a
 Tornado server that holds a persistent process and talks to the browser over WebSockets.
 There is no Passenger entry point to give it, and no way to keep the process alive
-between requests. If your plan is shared hosting, see **Alternatives** below.
+between requests. On a shared plan, use Streamlit Community Cloud (below) instead.
 
 **A VPS or dedicated server works.** You need root SSH. Two pieces: a systemd unit to
 keep the app running, and nginx in front of it for TLS and WebSocket passthrough.
@@ -102,13 +102,34 @@ auth_basic "Redirect Mapper";
 auth_basic_user_file /etc/nginx/.htpasswd;
 ```
 
-## Alternatives if you're on shared hosting
+## Streamlit Community Cloud (the shared-hosting answer)
 
-- **Streamlit Community Cloud** — free, deploys from this GitHub repo, gives you a
-  `*.streamlit.app` URL with a shared password. Apps sleep when idle and take ~30
-  seconds to wake.
-- **Any container host** (Render, Fly.io, Railway) — a few dollars a month, no server
-  administration. All three run Streamlit without special configuration.
+Free, and it deploys from this repository directly. Nothing to install or administer.
+
+1. Go to <https://share.streamlit.io> and sign in with the GitHub account that can see
+   `partnersmg/Claude`.
+2. Authorize Streamlit for the `partnersmg` organization — a private repo won't appear
+   in the list until you do. An org owner may have to approve this.
+3. **Create app** → **Deploy a public app from GitHub**, and fill in:
+   - Repository: `partnersmg/Claude`
+   - Branch: `claude/podcast-url-redirect-mapper-tr5htp` (or `main` once merged)
+   - Main file path: `redirect_mapper/app.py`
+4. Deploy. The first build takes a few minutes while it installs the dependencies from
+   the root `requirements.txt`.
+5. **Restrict who can open it.** In the app's settings, under sharing, set the app to
+   private and add your team's email addresses. Do this before circulating the link —
+   the app fetches whatever URLs it's handed, so an open one is a small open proxy.
+
+Things to know about the free tier:
+
+- Apps sleep after a period of inactivity and take around 30 seconds to wake on the
+  next visit. The first person in each morning waits; nobody else does.
+- Resources are modest. A few hundred URLs with title fetching is well within it; tens
+  of thousands may not be.
+- Pushing to the deployed branch redeploys automatically.
+
+If you outgrow it, Render or Fly.io run the same repo for a few dollars a month with a
+custom domain and no sleeping, still without server administration.
 
 ## Operational notes
 
