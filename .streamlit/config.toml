@@ -1,0 +1,4 @@
+# Suppresses Streamlit's first-run email prompt, which otherwise blocks startup
+# until someone presses Enter -- including under systemd, where nobody can.
+[browser]
+gatherUsageStats = false
