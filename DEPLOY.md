@@ -27,8 +27,7 @@ keep the app running, and nginx in front of it for TLS and WebSocket passthrough
 sudo apt install -y python3-venv nginx        # or dnf, on CentOS-family images
 sudo mkdir -p /opt/redirect-mapper
 sudo chown "$USER" /opt/redirect-mapper
-git clone -b claude/podcast-url-redirect-mapper-tr5htp \
-  https://github.com/partnersmg/Claude.git /opt/redirect-mapper
+git clone https://github.com/partnersmg/redirect-mapper.git /opt/redirect-mapper
 cd /opt/redirect-mapper
 python3 -m venv .venv
 .venv/bin/pip install -r redirect_mapper/requirements-app.txt
@@ -106,13 +105,13 @@ auth_basic_user_file /etc/nginx/.htpasswd;
 
 Free, and it deploys from this repository directly. Nothing to install or administer.
 
-1. Go to <https://share.streamlit.io> and sign in with the GitHub account that can see
-   `partnersmg/Claude`.
-2. Authorize Streamlit for the `partnersmg` organization — a private repo won't appear
-   in the list until you do. An org owner may have to approve this.
+1. Go to <https://share.streamlit.io> and sign in with GitHub.
+2. Authorize Streamlit. Because this repository is public, the `public_repo` scope it
+   asks for on the first screen is enough — there is no need to grant it read/write
+   across the organization's private repositories.
 3. **Create app** → **Deploy a public app from GitHub**, and fill in:
-   - Repository: `partnersmg/Claude`
-   - Branch: `claude/podcast-url-redirect-mapper-tr5htp` (or `main` once merged)
+   - Repository: `partnersmg/redirect-mapper`
+   - Branch: `main`
    - Main file path: `redirect_mapper/app.py`
 4. Deploy. The first build takes a few minutes while it installs the dependencies from
    the root `requirements.txt`.

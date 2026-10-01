@@ -1,0 +1,8 @@
+__pycache__/
+*.pyc
+.venv/
+# Generated output
+redirects.csv
+unmatched.csv
+*_redirects.csv
+*_review.csv

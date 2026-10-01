@@ -1,10 +1,19 @@
 # Redirect Mapper
 
 Maps old-site URLs to new-site URLs for 301 redirects, using two XML sitemaps as input.
+Built for site migrations where hundreds of pages move and someone has to decide where
+each old URL should point.
+
+Matching is layered — exact identifiers first, then exact slugs, then fuzzy title and
+slug similarity — and it refuses to guess below a confidence floor, flagging those URLs
+for a human instead.
 
 ## Web app
 
 ```bash
+git clone https://github.com/partnersmg/redirect-mapper
+cd redirect-mapper
+python3 -m venv .venv && source .venv/bin/activate
 pip install -r redirect_mapper/requirements-app.txt
 python3 -m streamlit run redirect_mapper/app.py
 ```
